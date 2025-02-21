@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Dynamic Family Tree (PPTX)</title>
+    
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+
+    <style>
+        body { font-family: sans-serif; margin: 20px; text-align: center; }
+        #controls { margin-bottom: 15px; }
+        #controls input { margin: 5px; padding: 6px; width: 250px; }
+        #tree-container { display: inline-block; border: 1px solid #ccc; margin-top: 20px; }
+        .node rect { fill: #fff; stroke: #000; stroke-width: 2px; cursor: pointer; }
+        .node text { font-size: 14px; font-weight: bold; text-anchor: middle; }
+        .link { fill: none; stroke: #000; stroke-width: 2px; }
+    </style>
+</head>
+<body>
+    <h1>वंशावली (PPTX)</h1>
+
+    <div id="controls">
+        <input type="text" id="rootName" placeholder="वंशका मूल व्यक्ति (यदि तोकिएको छैन भने)" />
+        <button onclick="setRoot()">Set</button><br/>
+        <input type="text" id="parentName" placeholder="बुबाको नाम" />
+        <input type="text" id="childName" placeholder="छोराछोरीको नाम" />
+        <button onclick="addChild()">छोराछोरीको नाम थप्नुहोस्</button><br/>
+        <input type="text" id="fileNameInput" placeholder="Enter file name" />
+        <button onclick="downloadPPT()">Download as PPTX</button>
+    </div>
+
+    <div id="tree-container"></div>
+
+    <script>
+        function measureTextWidth(text, font = "14px sans-serif") {
+            const canvas = measureTextWidth.canvas || (measureTextWidth.canvas = document.createElement("canvas"));
+            const context = canvas.getContext("2d");
+            context.font = font;
+            return context.measureText(text).width;
+        }
+
+        let familyTree = null;
+
+        function findNodeByName(node, name) {
+            if (!node) return null;
+            if (node.name === name) return node;
+            if (node.children) {
+                for (let child of node.children) {
+                    const result = findNodeByName(child, name);
+                    if (result) return result;
+                }
+            }
+            return null;
+        }
+
+        function setRoot() {
+            const rootName = document.getElementById("rootName").value.trim();
+            if (!rootName) {
+                alert("वंशका मूल व्यक्तिको नाम आवश्यक छ।");
+                return;
+            }
+            familyTree = { name: rootName, children: [] };
+            document.getElementById("rootName").value = "";
+            renderTree();
+        }
+
+        function addChild() {
+            if (!familyTree) {
+                alert("वंशका मूल व्यक्तिको नाम आवश्यक छ।");
+                return;
+            }
+            const parentName = document.getElementById("parentName").value.trim();
+            const childName = document.getElementById("childName").value.trim();
+            if (!parentName || !childName) {
+                alert("दुवै बुबा र बच्चाको नाम आवश्यक छ।");
+                return;
+            }
+            let parentNode = findNodeByName(familyTree, parentName);
+            if (!parentNode) {
+                alert(`बुबा '${parentName}'को नाम फेला परेन!`);
+                return;
+            }
+            if (!parentNode.children) parentNode.children = [];
+            parentNode.children.push({ name: childName });
+            document.getElementById("childName").value = "";
+            renderTree();
+        }
+
+        function renderTree() {
+            const container = document.getElementById("tree-container");
+            container.innerHTML = "";
+            if (!familyTree) return;
+
+            const horizontalSpacing = 120;
+            const verticalSpacing = 70;
+
+            const root = d3.hierarchy(familyTree);
+            root.each(d => {
+                d.data.boxWidth = measureTextWidth(d.data.name, "14px sans-serif") + 20;
+                d.data.boxHeight = 40;
+            });
+
+            const treeLayout = d3.tree()
+                .nodeSize([horizontalSpacing, verticalSpacing])
+                .separation((a, b) => {
+                    const aHalf = a.data.boxWidth / 2;
+                    const bHalf = b.data.boxWidth / 2;
+                    return (aHalf + bHalf + 10) / horizontalSpacing;
+                });
+
+            treeLayout(root);
+
+            let xMin = Infinity, xMax = -Infinity;
+            root.each(d => {
+                if (d.x < xMin) xMin = d.x;
+                if (d.x > xMax) xMax = d.x;
+            });
+
+            const margin = 30;
+            const svgWidth = Math.abs(xMax - xMin) + d3.max(root.descendants(), d => d.data.boxWidth) + margin * 2;
+            const svgHeight = (root.height + 1) * verticalSpacing + margin * 2;
+
+            const svg = d3.select("#tree-container")
+                .append("svg")
+                .attr("width", svgWidth)
+                .attr("height", svgHeight);
+
+            const containerWidth = document.getElementById("tree-container").offsetWidth;
+            const xShift = (containerWidth / 2) - ((xMax + xMin) / 2);
+
+            root.each(d => {
+                d.data._x = d.x + xShift;
+                d.data._y = d.depth * verticalSpacing + margin;
+            });
+
+            svg.selectAll(".link")
+                .data(root.links())
+                .enter()
+                .append("path")
+                .attr("class", "link")
+                .attr("d", d => {
+                    const sourceY = d.source.data._y + d.source.data.boxHeight / 2;
+                    const targetY = d.target.data._y - d.target.data.boxHeight / 2;
+                    const midY = sourceY + (targetY - sourceY) * 0.4;
+                    return `
+                        M${d.source.data._x},${sourceY}
+                        V${midY}
+                        H${d.target.data._x}
+                        V${targetY}
+                    `;
+                });
+
+            const node = svg.selectAll(".node")
+                .data(root.descendants())
+                .enter()
+                .append("g")
+                .attr("class", "node")
+                .attr("transform", d => `translate(${d.data._x},${d.data._y})`)
+                .on("click", function(event, d) {
+                    const newName = prompt("Edit name:", d.data.name);
+                    if (newName !== null && newName.trim() !== "") {
+                        d.data.name = newName.trim();
+                        renderTree();
+                    }
+                });
+
+            node.append("rect")
+                .attr("width", d => d.data.boxWidth)
+                .attr("height", d => d.data.boxHeight)
+                .attr("x", d => -d.data.boxWidth / 2)
+                .attr("y", d => -d.data.boxHeight / 2)
+                .attr("rx", 4);
+
+            node.append("text")
+                .attr("dy", ".35em")
+                .text(d => d.data.name);
+        }
+
+        async function downloadPPT() {
+    if (!familyTree) {
+        alert("वंशका मूल व्यक्तिको नाम आवश्यक छ।");
+        return;
+    }
+    try {
+        const pptx = new PptxGenJS();
+        const slideWidth = 13.333;
+        const slideHeight = 7.5;
+        const marginX = 0.25;
+        const marginY = 0.25;
+        const availableWidth = slideWidth - 2 * marginX;
+        const availableHeight = slideHeight - 2 * marginY;
+
+        const root = d3.hierarchy(familyTree);
+        
+        let totalNodes = 0;
+        let maxDepth = 0;
+        let maxNameLength = 0;
+        root.each(d => {
+            totalNodes++;
+            maxDepth = Math.max(maxDepth, d.depth);
+            maxNameLength = Math.max(maxNameLength, d.data.name.length);
+        });
+
+        // Modified font size calculation:
+        const baseFontSize = Math.max(
+            10, // Increased minimum size for better readability
+            Math.min(14, 18 - Math.log2(totalNodes) - Math.log2(maxNameLength / 6)) // Adjusted coefficients
+        );
+
+        // Modified padding calculations:
+        const horizontalPadding = baseFontSize * 0.6; // Reduced padding
+        const verticalPadding = baseFontSize * 0.4;   // Reduced padding
+
+        root.each(d => {
+            const textWidth = measureTextWidth(d.data.name, `${baseFontSize}px sans-serif`) / 96;
+            d.data.boxWidth = textWidth + (horizontalPadding / 36);
+            d.data.boxHeight = (baseFontSize + verticalPadding) / 72;
+        });
+
+        // Modified spacing calculations:
+        const horizontalSpacing = Math.min(60, Math.max(30, 200 / Math.pow(totalNodes, 0.3)));
+        const verticalSpacing = Math.min(40, Math.max(20, 120 / maxDepth));
+
+        const treeLayout = d3.tree()
+            .nodeSize([horizontalSpacing, verticalSpacing])
+            .separation((a, b) => {
+                const aWidth = a.data.boxWidth * 72;
+                const bWidth = b.data.boxWidth * 72;
+                return (aWidth/2 + bWidth/2 + 10) / horizontalSpacing; // Increased gap between nodes
+            });
+
+        treeLayout(root);
+
+        root.each(d => {
+            d.data._x = d.x / 72;
+            d.data._y = d.y / 72;
+        });
+
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        root.each(d => {
+            const halfWidth = d.data.boxWidth / 2;
+            minX = Math.min(minX, d.data._x - halfWidth);
+            maxX = Math.max(maxX, d.data._x + halfWidth);
+            minY = Math.min(minY, d.data._y);
+            maxY = Math.max(maxY, d.data._y);
+        });
+
+        const treeWidth = maxX - minX;
+        const treeHeight = maxY - minY;
+
+        const scaleX = availableWidth / (treeWidth || 1);
+        const scaleY = availableHeight / (treeHeight || 1);
+        const scale = Math.min(scaleX, scaleY) * 0.95;
+
+        const offsetX = marginX + (availableWidth - treeWidth * scale) / 2;
+        const offsetY = marginY;
+
+        root.each(d => {
+            d.data._x = offsetX + (d.data._x - minX) * scale;
+            d.data._y = offsetY + d.data._y * scale;
+        });
+
+        const slide = pptx.addSlide();
+
+        root.links().forEach(link => {
+            const source = link.source.data;
+            const target = link.target.data;
+            const startY = source._y + source.boxHeight / 2;
+            const endY = target._y - target.boxHeight / 2;
+            const midY = (startY + endY) / 2;
+
+            slide.addShape(pptx.ShapeType.line, {
+                x: source._x,
+                y: startY,
+                w: 0,
+                h: (midY - startY),
+                line: { color: "000000", width: 0.5 }
+            });
+
+            slide.addShape(pptx.ShapeType.line, {
+                x: Math.min(source._x, target._x),
+                y: midY,
+                w: Math.abs(target._x - source._x),
+                h: 0,
+                line: { color: "000000", width: 0.5 }
+            });
+
+            slide.addShape(pptx.ShapeType.line, {
+                x: target._x,
+                y: midY,
+                w: 0,
+                h: (endY - midY),
+                line: { color: "000000", width: 0.5 }
+            });
+        });
+
+        root.descendants().forEach(d => {
+            const halfWidth = d.data.boxWidth / 2;
+            
+            slide.addShape(pptx.ShapeType.rect, {
+                x: d.data._x - halfWidth,
+                y: d.data._y - d.data.boxHeight / 2,
+                w: d.data.boxWidth,
+                h: d.data.boxHeight,
+                fill: { color: "FFFFFF" },
+                line: { color: "000000", width: 0.5 },
+                rectRadius: 2
+            });
+
+            slide.addText(d.data.name, {
+                x: d.data._x - halfWidth,
+                y: d.data._y - d.data.boxHeight / 2,
+                w: d.data.boxWidth,
+                h: d.data.boxHeight,
+                fontSize: baseFontSize,
+                align: "center",
+                valign: "middle",
+                bold: true,
+                fit: "shrink",
+                wrap: false,
+                autoFit: true,
+                minFontSize: 6
+            });
+        });
+
+        let fileName = document.getElementById("fileNameInput").value.trim();
+        if (!fileName) fileName = "FamilyTree";
+        if (!fileName.toLowerCase().endsWith(".pptx")) fileName += ".pptx";
+        await pptx.writeFile({ fileName: fileName });
+    } catch (error) {
+        console.error(error);
+        alert("Error generating PPTX.");
+    }
+}
+    </script>
+</body>
+</html>
