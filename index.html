@@ -15,10 +15,60 @@
         .node rect { fill: #fff; stroke: #000; stroke-width: 2px; cursor: pointer; }
         .node text { font-size: 14px; font-weight: bold; text-anchor: middle; }
         .link { fill: none; stroke: #000; stroke-width: 2px; }
+        .delete-btn { cursor: pointer; }
+        h1 {
+            font-size: 40px;
+            font-weight: bold;
+
+        }
+        .top-left-text {
+            position: absolute;
+            top: 10px;   /* Distance from the top */
+            left: 10px;  /* Distance from the left */
+            font-size: 30px;
+            font-weight: bold;
+            color: red;}
+            .control-text-left1{
+                position: absolute;
+            top: 50px;   /* Distance from the top */
+            left: 10px;  /* Distance from the left */
+            font-size: 15px;
+            font-weight: bold;
+            color: purple;
+            }
+            .control-text-left2{
+                position: absolute;
+            top: 70px;   /* Distance from the top */
+            left: 10px;  /* Distance from the left */
+            font-size: 15px;
+            font-weight: bold;
+            color: purple;
+            }
+            .control-text-left3{
+                position: absolute;
+            top: 90px;   /* Distance from the top */
+            left: 10px;  /* Distance from the left */
+            font-size: 15px;
+            font-weight: bold;
+            color: purple;
+            }
+            .control-text-left4{
+                position: absolute;
+            top: 110px;   /* Distance from the top */
+            left: 10px;  /* Distance from the left */
+            font-size: 15px;
+            font-weight: bold;
+            color: purple;
+            }
     </style>
 </head>
 <body>
     <h1>वंशावली (PPTX)</h1>
+    <div class="top-left-text">**नियन्त्रणहरू**</div>
+    <div class="control-text-left4">*मेटाउन Delete(X) थिच्नुहोस्।</div>
+    <div class="control-text-left3">*Edit गर्न 'Box'को माथि थिच्नुहोस्।</div>
+    <div class="control-text-left1">*Set' गर्न र अगाडि जान 'Enter' थिच्नुहोस्।</div>
+    <div class="control-text-left2">*मेटाउन र पछाडि जान 'Esc' थिच्नुहोस्।</div>
 
     <div id="controls">
         <input type="text" id="rootName" placeholder="वंशका मूल व्यक्ति (यदि तोकिएको छैन भने)" />
@@ -63,6 +113,7 @@
             familyTree = { name: rootName, children: [] };
             document.getElementById("rootName").value = "";
             renderTree();
+            document.getElementById("parentName").focus();
         }
 
         function addChild() {
@@ -86,6 +137,52 @@
             document.getElementById("childName").value = "";
             renderTree();
         }
+            document.getElementById("parentName").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+             event.preventDefault(); // Prevent default form behavior
+             document.getElementById("childName").focus(); // Call addChild function when Enter is pressed
+            }
+            });
+            document.getElementById("childName").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+             event.preventDefault(); // Prevent default form behavior
+            addChild(); // Call addChild function when Enter is pressed
+            }
+            });
+            
+// Automatically set the root when pressing "Enter" in the rootName field
+            document.getElementById("rootName").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+            event.preventDefault(); // Prevents default behavior (like form submission)
+            setRoot(); // Call setRoot function
+            }
+            });
+            
+            // Handle "Esc" key for all input fields
+            function handleEscapeKey(event, fieldId, focusBackId) {
+                if (event.key === "Escape") {
+                    event.preventDefault(); // Prevent default behavior
+                    document.getElementById(fieldId).value = ""; // Clear input field
+                    if (focusBackId) {
+                        document.getElementById(focusBackId).focus(); // Move focus back
+                    }
+                }
+            }
+
+            // Apply "Esc" key functionality to each input field
+            document.getElementById("rootName").addEventListener("keydown", function(event) {
+                handleEscapeKey(event, "rootName"); // Clears rootName but does not move focus
+            });
+
+            document.getElementById("parentName").addEventListener("keydown", function(event) {
+                handleEscapeKey(event, "parentName"); // Clears and moves focus to rootName
+            });
+
+            document.getElementById("childName").addEventListener("keydown", function(event) {
+                handleEscapeKey(event, "childName", "parentName"); // Clears and moves focus to parentName
+            });
+
+
 
         function renderTree() {
             const container = document.getElementById("tree-container");
@@ -151,193 +248,232 @@
                     `;
                 });
 
-            const node = svg.selectAll(".node")
-                .data(root.descendants())
-                .enter()
-                .append("g")
-                .attr("class", "node")
-                .attr("transform", d => `translate(${d.data._x},${d.data._y})`)
-                .on("click", function(event, d) {
-                    const newName = prompt("Edit name:", d.data.name);
-                    if (newName !== null && newName.trim() !== "") {
-                        d.data.name = newName.trim();
-                        renderTree();
-                    }
-                });
+               // ...
+const node = svg.selectAll(".node")
+    .data(root.descendants())
+    .enter()
+    .append("g")
+    .attr("class", "node")
+    .attr("transform", d => `translate(${d.data._x},${d.data._y})`)
+    .on("click", function(event, d) {
+        const newName = prompt("Edit name:", d.data.name);
+        if (newName !== null && newName.trim() !== "") {
+            d.data.name = newName.trim();
+            renderTree();
+        }
+    });
 
-            node.append("rect")
-                .attr("width", d => d.data.boxWidth)
-                .attr("height", d => d.data.boxHeight)
-                .attr("x", d => -d.data.boxWidth / 2)
-                .attr("y", d => -d.data.boxHeight / 2)
-                .attr("rx", 4);
+// Draw the main rectangle
+node.append("rect")
+    .attr("width", d => d.data.boxWidth)
+    .attr("height", d => d.data.boxHeight)
+    .attr("x", d => -d.data.boxWidth / 2)
+    .attr("y", d => -d.data.boxHeight / 2)
+    .attr("rx", 4);
 
-            node.append("text")
-                .attr("dy", ".35em")
-                .text(d => d.data.name);
+node.append("text")
+    .attr("dy", ".35em")
+    .text(d => d.data.name);
+
+// Delete button at bottom-middle
+const deleteButton = node.append("g")
+    .attr("class", "delete-btn")
+    // Center horizontally (x=0); place near the bottom (y = boxHeight/2 - 10)
+    .attr("transform", d => `translate(0, ${d.data.boxHeight / 2 - 2})`)
+    .style("cursor", "pointer")
+    .on("click", function(event, d) {
+        event.stopPropagation();  // Prevent node's click event
+        const confirmDelete = confirm(`Are you sure you want to delete "${d.data.name}"?`);
+        if (!confirmDelete) return; // If user clicks "Cancel", do nothing
+
+        if (d.parent) {
+            const siblings = d.parent.data.children;
+            const index = siblings.indexOf(d.data);
+            if (index !== -1) {
+                siblings.splice(index, 1);
+                if (siblings.length === 0) delete d.parent.data.children;
+            }
+        } else {
+            familyTree = null;
+        }
+        renderTree();
+    });
+
+
+
+deleteButton.append("text")
+    .text("X")
+    .attr("fill", "red")
+    .attr("text-anchor", "middle")
+    .attr("dominant-baseline", "middle")
+    .attr("font-size", "10px")
+    .attr("dy", "0.3em");
+
+
+
         }
 
         async function downloadPPT() {
-    if (!familyTree) {
-        alert("वंशका मूल व्यक्तिको नाम आवश्यक छ।");
-        return;
-    }
-    
-    try {
-        const pptx = new PptxGenJS();
-        const slideWidth = 10;
-        const slideHeight = 7.5;
-        const margin = 0.75;
-        const usableWidth = slideWidth - (2 * margin);
-        const usableHeight = slideHeight - (2 * margin);
-        
-        const root = d3.hierarchy(familyTree);
-        const levels = {};
-        
-        // Calculate initial box sizes based on text content
-        root.each(d => {
-            levels[d.depth] = levels[d.depth] || [];
-            levels[d.depth].push(d);
-            const textWidth = measureTextWidth(d.data.name, "14px sans-serif");
-            const textHeight = 20; // Base text height
-            const padding = 20;
-            d.data.boxWidth = textWidth + padding;
-            d.data.boxHeight = textHeight + padding;
-            d.data.textWidth = textWidth;
-            d.data.textHeight = textHeight;
-        });
-        
-        // Adjust boxes in each level to prevent overlaps
-        Object.values(levels).forEach(levelNodes => {
-            const minSpacing = 20;
-            let totalWidth = levelNodes.reduce((sum, node) => sum + node.data.boxWidth, 0);
-            let totalSpacing = (levelNodes.length - 1) * minSpacing;
-            
-            if (totalWidth + totalSpacing > usableWidth * 96) {
-                const availableWidth = usableWidth * 96 - totalSpacing;
-                const scaleFactor = availableWidth / totalWidth;
-                
-                levelNodes.forEach(node => {
-                    node.data.boxWidth *= scaleFactor;
-                    node.data.boxHeight *= scaleFactor;
-                    // Store scale factor for text sizing
-                    node.data.textScale = scaleFactor;
-                });
-            } else {
-                levelNodes.forEach(node => {
-                    node.data.textScale = 1;
-                });
+            if (!familyTree) {
+                alert("वंशका मूल व्यक्तिको नाम आवश्यक छ।");
+                return;
             }
-        });
-        
-        const maxNodesInLevel = Math.max(...Object.values(levels).map(l => l.length));
-        const totalLevels = Object.keys(levels).length;
-        
-        const horizontalSpacing = Math.min((usableWidth * 96) / maxNodesInLevel, 120);
-        const verticalSpacing = Math.min((usableHeight * 96) / totalLevels, 70);
-        
-        const treeLayout = d3.tree()
-            .nodeSize([horizontalSpacing, verticalSpacing])
-            .separation((a, b) => {
-                const minSeparation = (a.data.boxWidth + b.data.boxWidth) / (2 * horizontalSpacing);
-                return Math.max(minSeparation, 1.2);
-            });
-        
-        treeLayout(root);
-        
-        let maxDepth = Math.max(...root.descendants().map(d => d.depth));
-        let verticalScale = (usableHeight * 96) / (maxDepth * verticalSpacing);
-        verticalScale = Math.min(verticalScale, 1);
-        
-        let xMin = Infinity, xMax = -Infinity;
-        root.each(d => {
-            xMin = Math.min(xMin, d.x - d.data.boxWidth / 2);
-            xMax = Math.max(xMax, d.x + d.data.boxWidth / 2);
-        });
-        
-        const horizontalScale = Math.min((usableWidth * 96) / (xMax - xMin), 1);
-        const finalScale = Math.min(horizontalScale, verticalScale);
-        
-        const xOffset = margin * 96 - xMin * finalScale + (usableWidth * 96 - (xMax - xMin) * finalScale) / 2;
-        const yOffset = margin * 96;
-        
-        root.each(d => {
-            d.data._x = (d.x * finalScale + xOffset) / 96;
-            d.data._y = (d.depth * verticalSpacing * finalScale + yOffset) / 96;
-            d.data.boxWidth = (d.data.boxWidth * finalScale) / 96;
-            d.data.boxHeight = (d.data.boxHeight * finalScale) / 96;
-            // Calculate final text size based on both scalings
-            d.data.finalTextScale = d.data.textScale * finalScale;
-        });
-        
-        const slide = pptx.addSlide();
-        
-        root.links().forEach(d => {
-            const sourceY = d.source.data._y + d.source.data.boxHeight / 2;
-            const targetY = d.target.data._y - d.target.data.boxHeight / 2;
-            const midY = sourceY + (targetY - sourceY) * 0.4;
             
-            slide.addShape(pptx.ShapeType.line, {
-                x: d.source.data._x,
-                y: sourceY,
-                w: 0,
-                h: midY - sourceY,
-                line: { color: "000000", width: 1 }
-            });
-            
-            slide.addShape(pptx.ShapeType.line, {
-                x: Math.min(d.source.data._x, d.target.data._x),
-                y: midY,
-                w: Math.abs(d.target.data._x - d.source.data._x),
-                h: 0,
-                line: { color: "000000", width: 1 }
-            });
-            
-            slide.addShape(pptx.ShapeType.line, {
-                x: d.target.data._x,
-                y: midY,
-                w: 0,
-                h: targetY - midY,
-                line: { color: "000000", width: 1 }
-            });
-        });
-        
-        root.descendants().forEach(d => {
-            const fontSize = Math.max(6, 14 * d.data.finalTextScale);
-            
-            slide.addShape(pptx.ShapeType.rect, {
-                x: d.data._x - d.data.boxWidth / 2,
-                y: d.data._y - d.data.boxHeight / 2,
-                w: d.data.boxWidth,
-                h: d.data.boxHeight,
-                fill: { color: "FFFFFF" },
-                line: { color: "000000", width: 1 },
-                rectRadius: 2
-            });
-            
-            slide.addText(d.data.name, {
-                x: d.data._x - d.data.boxWidth / 2,
-                y: d.data._y - d.data.boxHeight / 2,
-                w: d.data.boxWidth,
-                h: d.data.boxHeight,
-                fontSize: fontSize,
-                align: "center",
-                valign: "middle",
-                bold: true,
-                fit: "shrink",
-                wrap: false
-            });
-        });
-        
-        let fileName = document.getElementById("fileNameInput").value.trim() || "FamilyTree";
-        if (!fileName.toLowerCase().endsWith(".pptx")) fileName += ".pptx";
-        
-        await pptx.writeFile({ fileName: fileName });
-    } catch (error) {
-        console.error(error);
-        alert("Error generating PPTX.");
-    }
-}
+            try {
+                const pptx = new PptxGenJS();
+                const slideWidth = 10;
+                const slideHeight = 7.5;
+                const margin = 0.75;
+                const usableWidth = slideWidth - (2 * margin);
+                const usableHeight = slideHeight - (2 * margin);
+                
+                const root = d3.hierarchy(familyTree);
+                const levels = {};
+                
+                // Calculate initial box sizes based on text content
+                root.each(d => {
+                    levels[d.depth] = levels[d.depth] || [];
+                    levels[d.depth].push(d);
+                    const textWidth = measureTextWidth(d.data.name, "14px sans-serif");
+                    const textHeight = 20; // Base text height
+                    const padding = 20;
+                    d.data.boxWidth = textWidth + padding;
+                    d.data.boxHeight = textHeight + padding;
+                    d.data.textWidth = textWidth;
+                    d.data.textHeight = textHeight;
+                });
+                
+                // Adjust boxes in each level to prevent overlaps
+                Object.values(levels).forEach(levelNodes => {
+                    const minSpacing = 20;
+                    let totalWidth = levelNodes.reduce((sum, node) => sum + node.data.boxWidth, 0);
+                    let totalSpacing = (levelNodes.length - 1) * minSpacing;
+                    
+                    if (totalWidth + totalSpacing > usableWidth * 96) {
+                        const availableWidth = usableWidth * 96 - totalSpacing;
+                        const scaleFactor = availableWidth / totalWidth;
+                        
+                        levelNodes.forEach(node => {
+                            node.data.boxWidth *= scaleFactor;
+                            node.data.boxHeight *= scaleFactor;
+                            // Store scale factor for text sizing
+                            node.data.textScale = scaleFactor;
+                        });
+                    } else {
+                        levelNodes.forEach(node => {
+                            node.data.textScale = 1;
+                        });
+                    }
+                });
+                
+                const maxNodesInLevel = Math.max(...Object.values(levels).map(l => l.length));
+                const totalLevels = Object.keys(levels).length;
+                
+                const horizontalSpacing = Math.min((usableWidth * 96) / maxNodesInLevel, 120);
+                const verticalSpacing = Math.min((usableHeight * 96) / totalLevels, 70);
+                
+                const treeLayout = d3.tree()
+                    .nodeSize([horizontalSpacing, verticalSpacing])
+                    .separation((a, b) => {
+                        const minSeparation = (a.data.boxWidth + b.data.boxWidth) / (2 * horizontalSpacing);
+                        return Math.max(minSeparation, 1.2);
+                    });
+                
+                treeLayout(root);
+                
+                let maxDepth = Math.max(...root.descendants().map(d => d.depth));
+                let verticalScale = (usableHeight * 96) / (maxDepth * verticalSpacing);
+                verticalScale = Math.min(verticalScale, 1);
+                
+                let xMin = Infinity, xMax = -Infinity;
+                root.each(d => {
+                    xMin = Math.min(xMin, d.x - d.data.boxWidth / 2);
+                    xMax = Math.max(xMax, d.x + d.data.boxWidth / 2);
+                });
+                
+                const horizontalScale = Math.min((usableWidth * 96) / (xMax - xMin), 1);
+                const finalScale = Math.min(horizontalScale, verticalScale);
+                
+                const xOffset = margin * 96 - xMin * finalScale + (usableWidth * 96 - (xMax - xMin) * finalScale) / 2;
+                const yOffset = margin * 96;
+                
+                root.each(d => {
+                    d.data._x = (d.x * finalScale + xOffset) / 96;
+                    d.data._y = (d.depth * verticalSpacing * finalScale + yOffset) / 96;
+                    d.data.boxWidth = (d.data.boxWidth * finalScale) / 96;
+                    d.data.boxHeight = (d.data.boxHeight * finalScale) / 96;
+                    // Calculate final text size based on both scalings
+                    d.data.finalTextScale = d.data.textScale * finalScale;
+                });
+                
+                const slide = pptx.addSlide();
+                
+                root.links().forEach(d => {
+                    const sourceY = d.source.data._y + d.source.data.boxHeight / 2;
+                    const targetY = d.target.data._y - d.target.data.boxHeight / 2;
+                    const midY = sourceY + (targetY - sourceY) * 0.4;
+                    
+                    slide.addShape(pptx.ShapeType.line, {
+                        x: d.source.data._x,
+                        y: sourceY,
+                        w: 0,
+                        h: midY - sourceY,
+                        line: { color: "000000", width: 1 }
+                    });
+                    
+                    slide.addShape(pptx.ShapeType.line, {
+                        x: Math.min(d.source.data._x, d.target.data._x),
+                        y: midY,
+                        w: Math.abs(d.target.data._x - d.source.data._x),
+                        h: 0,
+                        line: { color: "000000", width: 1 }
+                    });
+                    
+                    slide.addShape(pptx.ShapeType.line, {
+                        x: d.target.data._x,
+                        y: midY,
+                        w: 0,
+                        h: targetY - midY,
+                        line: { color: "000000", width: 1 }
+                    });
+                });
+                
+                root.descendants().forEach(d => {
+                    const fontSize = Math.max(6, 14 * d.data.finalTextScale);
+                    
+                    slide.addShape(pptx.ShapeType.rect, {
+                        x: d.data._x - d.data.boxWidth / 2,
+                        y: d.data._y - d.data.boxHeight / 2,
+                        w: d.data.boxWidth,
+                        h: d.data.boxHeight,
+                        fill: { color: "FFFFFF" },
+                        line: { color: "000000", width: 1 },
+                        rectRadius: 2
+                    });
+                    
+                    slide.addText(d.data.name, {
+                        x: d.data._x - d.data.boxWidth / 2,
+                        y: d.data._y - d.data.boxHeight / 2,
+                        w: d.data.boxWidth,
+                        h: d.data.boxHeight,
+                        fontSize: fontSize,
+                        align: "center",
+                        valign: "middle",
+                        bold: true,
+                        fit: "shrink",
+                        wrap: false
+                    });
+                });
+                
+                let fileName = document.getElementById("fileNameInput").value.trim() || "FamilyTree";
+                if (!fileName.toLowerCase().endsWith(".pptx")) fileName += ".pptx";
+                
+                await pptx.writeFile({ fileName: fileName });
+            } catch (error) {
+                console.error(error);
+                alert("Error generating PPTX.");
+            }
+        }
     </script>
 </body>
 </html>
